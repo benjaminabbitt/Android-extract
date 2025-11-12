@@ -59,6 +59,44 @@
             android:layout_marginStart="4dp" />
     </LinearLayout>
 
+    <!-- Selection and Merge Controls -->
+    <LinearLayout
+        android:id="@+id/mergeControlsLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone"
+        android:background="#E3F2FD">
+
+        <TextView
+            android:id="@+id/selectionCountTextView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="0 selected"
+            android:textStyle="bold"
+            android:gravity="center_vertical"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp" />
+
+        <Button
+            android:id="@+id/mergeButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/merge_selected"
+            android:layout_marginEnd="4dp"
+            style="@style/Widget.MaterialComponents.Button.TextButton" />
+
+        <Button
+            android:id="@+id/copyMergedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/copy_merged"
+            style="@style/Widget.MaterialComponents.Button.TextButton" />
+    </LinearLayout>
+
     <TextView
         android:id="@+id/logTitleTextView"
         android:layout_width="match_parent"

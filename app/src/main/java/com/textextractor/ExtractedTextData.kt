@@ -35,12 +35,13 @@ data class ExtractedTextData(
 
 /**
  * Singleton to store extracted text data
+ * Implements ITextDataRepository for IoC/testing
  */
-object TextDataRepository {
+object TextDataRepository : ITextDataRepository {
     private val extractedData = mutableListOf<ExtractedTextData>()
     private val listeners = mutableListOf<(ExtractedTextData) -> Unit>()
 
-    fun addExtractedText(data: ExtractedTextData) {
+    override fun addExtractedText(data: ExtractedTextData) {
         synchronized(extractedData) {
             extractedData.add(data)
             // Keep only last 1000 entries to prevent memory issues
@@ -53,27 +54,27 @@ object TextDataRepository {
         listeners.forEach { it(data) }
     }
 
-    fun getAllData(): List<ExtractedTextData> {
+    override fun getAllData(): List<ExtractedTextData> {
         synchronized(extractedData) {
             return extractedData.toList()
         }
     }
 
-    fun clearData() {
+    override fun clearData() {
         synchronized(extractedData) {
             extractedData.clear()
         }
     }
 
-    fun addListener(listener: (ExtractedTextData) -> Unit) {
+    override fun addListener(listener: (ExtractedTextData) -> Unit) {
         listeners.add(listener)
     }
 
-    fun removeListener(listener: (ExtractedTextData) -> Unit) {
+    override fun removeListener(listener: (ExtractedTextData) -> Unit) {
         listeners.remove(listener)
     }
 
-    fun getDataByPackage(packageName: String): List<ExtractedTextData> {
+    override fun getDataByPackage(packageName: String): List<ExtractedTextData> {
         synchronized(extractedData) {
             return extractedData.filter { it.packageName == packageName }
         }

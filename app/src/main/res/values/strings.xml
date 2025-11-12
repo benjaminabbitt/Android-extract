@@ -14,4 +14,10 @@
     <string name="open_settings">Open Accessibility Settings</string>
     <string name="export_log">Export Log</string>
     <string name="filter_by_app">Filter by App</string>
+    <string name="merge_selected">Merge</string>
+    <string name="copy_merged">Copy</string>
+    <string name="selection_count">%d selected</string>
+    <string name="merged_text_dialog_title">Merged Text</string>
+    <string name="copied_to_clipboard">Copied to clipboard</string>
+    <string name="select_items_first">Select items to merge</string>
 </resources>

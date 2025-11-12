@@ -1,5 +1,6 @@
 package com.textextractor
 
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -10,7 +11,10 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.CheckBox
+import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -18,14 +22,41 @@ import timber.log.Timber
 import java.io.File
 import java.io.FileWriter
 
-class MainActivity : AppCompatActivity() {
+/**
+ * MainActivity - Main UI for text extraction app
+ *
+ * Implements IoC pattern with production and test constructors
+ * Provides:
+ * - Display of extracted text
+ * - Multi-select and merge functionality
+ * - Clipboard copy support
+ * - Export to file
+ */
+class MainActivity(
+    // IoC constructor for testing - allows dependency injection
+    private val textMerger: TextMerger = TextMerger(),
+    private val dataRepository: ITextDataRepository = TextDataRepository,
+    private val clipboardHelper: ClipboardHelper? = null
+) : AppCompatActivity() {
+
+    // Production constructor - used by Android framework
+    constructor() : this(
+        textMerger = TextMerger(),
+        dataRepository = TextDataRepository,
+        clipboardHelper = null  // Will be initialized in onCreate
+    )
 
     private lateinit var statusTextView: TextView
     private lateinit var enableServiceButton: Button
     private lateinit var clearLogButton: Button
     private lateinit var exportLogButton: Button
     private lateinit var recyclerView: RecyclerView
+    private lateinit var mergeControlsLayout: LinearLayout
+    private lateinit var selectionCountTextView: TextView
+    private lateinit var mergeButton: Button
+    private lateinit var copyMergedButton: Button
     private lateinit var adapter: TextLogAdapter
+    private lateinit var clipboard: ClipboardHelper
 
     private val textDataListener: (ExtractedTextData) -> Unit = { data ->
         runOnUiThread {
@@ -38,12 +69,15 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Initialize clipboard helper (for production use)
+        clipboard = clipboardHelper ?: ClipboardHelper(this)
+
         initViews()
         setupRecyclerView()
         updateServiceStatus()
 
         // Register listener for new extracted text
-        TextDataRepository.addListener(textDataListener)
+        dataRepository.addListener(textDataListener)
     }
 
     private fun initViews() {
@@ -52,6 +86,10 @@ class MainActivity : AppCompatActivity() {
         clearLogButton = findViewById(R.id.clearLogButton)
         exportLogButton = findViewById(R.id.exportLogButton)
         recyclerView = findViewById(R.id.recyclerView)
+        mergeControlsLayout = findViewById(R.id.mergeControlsLayout)
+        selectionCountTextView = findViewById(R.id.selectionCountTextView)
+        mergeButton = findViewById(R.id.mergeButton)
+        copyMergedButton = findViewById(R.id.copyMergedButton)
 
         enableServiceButton.setOnClickListener {
             openAccessibilitySettings()
@@ -64,12 +102,66 @@ class MainActivity : AppCompatActivity() {
         exportLogButton.setOnClickListener {
             exportLog()
         }
+
+        mergeButton.setOnClickListener {
+            showMergedText()
+        }
+
+        copyMergedButton.setOnClickListener {
+            copyMergedToClipboard()
+        }
     }
 
     private fun setupRecyclerView() {
-        adapter = TextLogAdapter(TextDataRepository.getAllData().toMutableList())
+        adapter = TextLogAdapter(
+            items = dataRepository.getAllData().toMutableList(),
+            textMerger = textMerger,
+            onSelectionChanged = { updateMergeControls() }
+        )
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
+    }
+
+    private fun updateMergeControls() {
+        val selectionCount = textMerger.getSelectionCount()
+
+        if (selectionCount > 0) {
+            mergeControlsLayout.visibility = View.VISIBLE
+            selectionCountTextView.text = getString(R.string.selection_count, selectionCount)
+        } else {
+            mergeControlsLayout.visibility = View.GONE
+        }
+    }
+
+    private fun showMergedText() {
+        val mergedText = textMerger.getMergedSelection()
+
+        if (mergedText.isEmpty()) {
+            Toast.makeText(this, R.string.select_items_first, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.merged_text_dialog_title)
+            .setMessage(mergedText)
+            .setPositiveButton("Copy") { _, _ ->
+                clipboard.copyToClipboard(mergedText)
+                Toast.makeText(this, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    private fun copyMergedToClipboard() {
+        val mergedText = textMerger.getMergedSelection()
+
+        if (mergedText.isEmpty()) {
+            Toast.makeText(this, R.string.select_items_first, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        clipboard.copyToClipboard(mergedText)
+        Toast.makeText(this, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
     }
 
     private fun updateServiceStatus() {
@@ -98,14 +190,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun clearLog() {
-        TextDataRepository.clearData()
+        dataRepository.clearData()
         adapter.clearItems()
+        textMerger.clearSelection()
+        updateMergeControls()
         Timber.d("Log cleared")
     }
 
     private fun exportLog() {
         try {
-            val data = TextDataRepository.getAllData()
+            val data = dataRepository.getAllData()
             val exportDir = File(getExternalFilesDir(null), "exports")
             exportDir.mkdirs()
 
@@ -125,8 +219,6 @@ class MainActivity : AppCompatActivity() {
             }
 
             Timber.d("Log exported to: ${exportFile.absolutePath}")
-
-            // Show a simple toast-like message
             statusTextView.text = "Exported to: ${exportFile.absolutePath}"
         } catch (e: Exception) {
             Timber.e(e, "Error exporting log")
@@ -141,7 +233,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        TextDataRepository.removeListener(textDataListener)
+        dataRepository.removeListener(textDataListener)
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -153,7 +245,7 @@ class MainActivity : AppCompatActivity() {
         return when (item.itemId) {
             R.id.action_refresh -> {
                 updateServiceStatus()
-                adapter.setItems(TextDataRepository.getAllData())
+                adapter.setItems(dataRepository.getAllData())
                 true
             }
             R.id.action_settings -> {
@@ -167,11 +259,25 @@ class MainActivity : AppCompatActivity() {
 
 /**
  * RecyclerView adapter for displaying extracted text data
+ * Supports multi-select for merging
+ *
+ * IoC constructor pattern for testability
  */
-class TextLogAdapter(private val items: MutableList<ExtractedTextData>) :
-    RecyclerView.Adapter<TextLogAdapter.ViewHolder>() {
+class TextLogAdapter(
+    private val items: MutableList<ExtractedTextData>,
+    private val textMerger: TextMerger = TextMerger(),  // IoC for testing
+    private val onSelectionChanged: () -> Unit = {}
+) : RecyclerView.Adapter<TextLogAdapter.ViewHolder>() {
+
+    // Production constructor
+    constructor(items: MutableList<ExtractedTextData>) : this(
+        items = items,
+        textMerger = TextMerger(),
+        onSelectionChanged = {}
+    )
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val checkBox: CheckBox = view.findViewById(R.id.selectionCheckBox)
         val appNameTextView: TextView = view.findViewById(R.id.appNameTextView)
         val timestampTextView: TextView = view.findViewById(R.id.timestampTextView)
         val extractedTextView: TextView = view.findViewById(R.id.extractedTextView)
@@ -197,6 +303,23 @@ class TextLogAdapter(private val items: MutableList<ExtractedTextData>) :
             item.viewIdResourceName?.let { append("\nView ID: $it") }
         }
         holder.detailsTextView.text = details
+
+        // Handle selection checkbox
+        holder.checkBox.isChecked = textMerger.isSelected(item)
+
+        holder.checkBox.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                textMerger.append(item)
+            } else {
+                textMerger.toggleSelection(item)
+            }
+            onSelectionChanged()
+        }
+
+        // Allow clicking the whole item to toggle selection
+        holder.itemView.setOnClickListener {
+            holder.checkBox.isChecked = !holder.checkBox.isChecked
+        }
     }
 
     override fun getItemCount(): Int = items.size
@@ -216,4 +339,17 @@ class TextLogAdapter(private val items: MutableList<ExtractedTextData>) :
         items.addAll(newItems)
         notifyDataSetChanged()
     }
+}
+
+/**
+ * Interface for TextDataRepository to enable testing
+ * Follows Dependency Inversion Principle
+ */
+interface ITextDataRepository {
+    fun addExtractedText(data: ExtractedTextData)
+    fun getAllData(): List<ExtractedTextData>
+    fun clearData()
+    fun addListener(listener: (ExtractedTextData) -> Unit)
+    fun removeListener(listener: (ExtractedTextData) -> Unit)
+    fun getDataByPackage(packageName: String): List<ExtractedTextData>
 }
