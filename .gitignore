@@ -1,0 +1,73 @@
+# Android
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Built application files
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+release/
+
+# Gradle files
+.gradle/
+build/
+
+# Local configuration file (sdk path, etc)
+local.properties
+
+# Android Studio
+*.iml
+.idea/
+*.ipr
+*.iws
+.navigation/
+captures/
+output.json
+
+# NDK
+obj/
+.externalNativeBuild
+
+# Rust
+native-extractor/target/
+native-extractor/Cargo.lock
+*.so
+*.a
+
+# jniLibs (generated)
+app/src/main/jniLibs/
+
+# Log files
+*.log
+
+# Keystore files
+*.jks
+*.keystore
+
+# Google Services
+google-services.json
+
+# Miscellaneous
+*.swp
+*~
+.DS_Store

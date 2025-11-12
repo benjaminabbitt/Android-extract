@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Text Extractor</string>
+    <string name="accessibility_service_description">This service extracts text from other applications for analysis and research purposes. It monitors UI changes and captures displayed text and input fields.</string>
+    <string name="service_status">Service Status:</string>
+    <string name="enabled">Enabled</string>
+    <string name="disabled">Disabled</string>
+    <string name="enable_service">Enable Service</string>
+    <string name="clear_log">Clear Log</string>
+    <string name="extracted_text_log">Extracted Text Log</string>
+    <string name="no_text_extracted">No text extracted yet. Enable the accessibility service to start capturing.</string>
+    <string name="service_running">Text Extraction Service is running</string>
+    <string name="service_not_running">Text Extraction Service is not running</string>
+    <string name="open_settings">Open Accessibility Settings</string>
+    <string name="export_log">Export Log</string>
+    <string name="filter_by_app">Filter by App</string>
+</resources>

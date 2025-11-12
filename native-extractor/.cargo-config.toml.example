@@ -1,0 +1,21 @@
+# Example Cargo configuration for Android NDK
+# Copy this file to ~/.cargo/config.toml and adjust paths for your system
+
+# Replace /path/to/android-ndk with your actual NDK path
+# Replace linux-x86_64 with darwin-x86_64 on macOS
+
+[target.aarch64-linux-android]
+ar = "/path/to/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/path/to/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android30-clang"
+
+[target.armv7-linux-androideabi]
+ar = "/path/to/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/path/to/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi30-clang"
+
+[target.x86_64-linux-android]
+ar = "/path/to/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/path/to/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android30-clang"
+
+[target.i686-linux-android]
+ar = "/path/to/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/path/to/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android30-clang"
