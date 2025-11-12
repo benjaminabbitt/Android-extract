@@ -97,6 +97,30 @@
             style="@style/Widget.MaterialComponents.Button.TextButton" />
     </LinearLayout>
 
+    <!-- App Filter Selector -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="12dp"
+        android:paddingBottom="8dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/filter_app"
+            android:textSize="14sp"
+            android:paddingEnd="8dp" />
+
+        <Spinner
+            android:id="@+id/appFilterSpinner"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:minHeight="48dp" />
+    </LinearLayout>
+
     <TextView
         android:id="@+id/logTitleTextView"
         android:layout_width="match_parent"
@@ -104,7 +128,7 @@
         android:text="@string/extracted_text_log"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:paddingTop="16dp"
+        android:paddingTop="8dp"
         android:paddingBottom="8dp" />
 
     <androidx.recyclerview.widget.RecyclerView

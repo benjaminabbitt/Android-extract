@@ -10,9 +10,12 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.LinearLayout
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -36,14 +39,16 @@ class MainActivity(
     // IoC constructor for testing - allows dependency injection
     private val textMerger: TextMerger = TextMerger(),
     private val dataRepository: ITextDataRepository = TextDataRepository,
-    private val clipboardHelper: ClipboardHelper? = null
+    private val clipboardHelper: ClipboardHelper? = null,
+    private val appListProvider: AppListProvider? = null
 ) : AppCompatActivity() {
 
     // Production constructor - used by Android framework
     constructor() : this(
         textMerger = TextMerger(),
         dataRepository = TextDataRepository,
-        clipboardHelper = null  // Will be initialized in onCreate
+        clipboardHelper = null,  // Will be initialized in onCreate
+        appListProvider = null  // Will be initialized in onCreate
     )
 
     private lateinit var statusTextView: TextView
@@ -55,8 +60,12 @@ class MainActivity(
     private lateinit var selectionCountTextView: TextView
     private lateinit var mergeButton: Button
     private lateinit var copyMergedButton: Button
+    private lateinit var appFilterSpinner: Spinner
     private lateinit var adapter: TextLogAdapter
     private lateinit var clipboard: ClipboardHelper
+    private lateinit var appProvider: AppListProvider
+
+    private var selectedPackageFilter: String? = null
 
     private val textDataListener: (ExtractedTextData) -> Unit = { data ->
         runOnUiThread {
@@ -71,9 +80,11 @@ class MainActivity(
 
         // Initialize clipboard helper (for production use)
         clipboard = clipboardHelper ?: ClipboardHelper(this)
+        appProvider = appListProvider ?: AppListProvider(this, dataRepository)
 
         initViews()
         setupRecyclerView()
+        setupAppFilterSpinner()
         updateServiceStatus()
 
         // Register listener for new extracted text
@@ -90,6 +101,7 @@ class MainActivity(
         selectionCountTextView = findViewById(R.id.selectionCountTextView)
         mergeButton = findViewById(R.id.mergeButton)
         copyMergedButton = findViewById(R.id.copyMergedButton)
+        appFilterSpinner = findViewById(R.id.appFilterSpinner)
 
         enableServiceButton.setOnClickListener {
             openAccessibilitySettings()
@@ -114,12 +126,57 @@ class MainActivity(
 
     private fun setupRecyclerView() {
         adapter = TextLogAdapter(
-            items = dataRepository.getAllData().toMutableList(),
+            items = getFilteredData().toMutableList(),
             textMerger = textMerger,
             onSelectionChanged = { updateMergeControls() }
         )
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
+    }
+
+    private fun setupAppFilterSpinner() {
+        // Get running apps + recently used apps from extraction history
+        val runningApps = appProvider.getRunningApps()
+        val recentApps = appProvider.getRecentlyUsedApps()
+
+        // Combine and deduplicate
+        val apps = mutableListOf(AppInfo("", getString(R.string.all_apps), false))
+        apps.addAll(
+            (runningApps + recentApps)
+                .distinctBy { it.packageName }
+                .sortedBy { it.appName.lowercase() }
+        )
+
+        val adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            apps
+        )
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        appFilterSpinner.adapter = adapter
+
+        appFilterSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val selectedApp = apps[position]
+                selectedPackageFilter = if (selectedApp.packageName.isEmpty()) null else selectedApp.packageName
+                refreshDisplayedData()
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                selectedPackageFilter = null
+                refreshDisplayedData()
+            }
+        }
+    }
+
+    private fun getFilteredData(): List<ExtractedTextData> {
+        return AppFilter.filterByApp(dataRepository.getAllData(), selectedPackageFilter)
+    }
+
+    private fun refreshDisplayedData() {
+        adapter.setItems(getFilteredData())
+        textMerger.clearSelection()
+        updateMergeControls()
     }
 
     private fun updateMergeControls() {
@@ -245,7 +302,8 @@ class MainActivity(
         return when (item.itemId) {
             R.id.action_refresh -> {
                 updateServiceStatus()
-                adapter.setItems(dataRepository.getAllData())
+                refreshDisplayedData()
+                setupAppFilterSpinner()  // Refresh app list
                 true
             }
             R.id.action_settings -> {
@@ -255,6 +313,19 @@ class MainActivity(
             else -> super.onOptionsItemSelected(item)
         }
     }
+}
+
+/**
+ * Interface for TextDataRepository to enable testing
+ * Follows Dependency Inversion Principle
+ */
+interface ITextDataRepository {
+    fun addExtractedText(data: ExtractedTextData)
+    fun getAllData(): List<ExtractedTextData>
+    fun clearData()
+    fun addListener(listener: (ExtractedTextData) -> Unit)
+    fun removeListener(listener: (ExtractedTextData) -> Unit)
+    fun getDataByPackage(packageName: String): List<ExtractedTextData>
 }
 
 /**
