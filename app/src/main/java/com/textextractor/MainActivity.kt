@@ -135,17 +135,12 @@ class MainActivity(
     }
 
     private fun setupAppFilterSpinner() {
-        // Get running apps + recently used apps from extraction history
+        // Get running apps only
         val runningApps = appProvider.getRunningApps()
-        val recentApps = appProvider.getRecentlyUsedApps()
 
-        // Combine and deduplicate
+        // Populate dropdown with running apps
         val apps = mutableListOf(AppInfo("", getString(R.string.all_apps), false))
-        apps.addAll(
-            (runningApps + recentApps)
-                .distinctBy { it.packageName }
-                .sortedBy { it.appName.lowercase() }
-        )
+        apps.addAll(runningApps.sortedBy { it.appName.lowercase() })
 
         val adapter = ArrayAdapter(
             this,
